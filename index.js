@@ -32,7 +32,11 @@ async function run() {
 
 
     const userCollection = client.db("SwiftParcel").collection("users");
-
+    
+    app.get('/users',async (req,res)=>{
+      const result = await userCollection.find().toArray()
+      res.send(result)
+    })
     app.post('/users',async(req,res)=>{
       const users = req.body
       const result = await userCollection.insertOne(users)
