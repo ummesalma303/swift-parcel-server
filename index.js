@@ -32,10 +32,30 @@ async function run() {
 
 
     const userCollection = client.db("SwiftParcel").collection("users");
+    const parcelCollection = client.db("SwiftParcel").collection("parcels");
+
+
+
+    /* --------------------------------- parcel --------------------------------- */
+    app.post('/parcel',async(req,res)=>{
+      const parcel = req.body
+      const result = await parcelCollection.insertOne(parcel)
+      console.log(result)
+      res.send(result)
+    })
+
+    app.get('/parcel/:email',async(req,res)=>{
+      const email = req.params.email
+      const query ={email}
+      const result = await parcelCollection.find(query).toArray()
+      res.send(result)
+    })
+    
     // users
     app.get('/count',async (req,res)=>{
       const usersCount = await userCollection.estimatedDocumentCount()
-      res.send({usersCount})
+      const parcelCount = await parcelCollection.estimatedDocumentCount()
+      res.send({usersCount,parcelCount})
     })
 
     app.get('/users/:email',async(req,res)=>{
