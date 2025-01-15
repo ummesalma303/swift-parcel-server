@@ -32,7 +32,19 @@ async function run() {
 
 
     const userCollection = client.db("SwiftParcel").collection("users");
-    
+    // users
+    app.get('/count',async (req,res)=>{
+      const usersCount = await userCollection.estimatedDocumentCount()
+      res.send({usersCount})
+    })
+
+    app.get('/users/:email',async(req,res)=>{
+      const email = req.params.email
+      const query ={email}
+      const result = await userCollection.findOne(query)
+      res.send(result)
+    })
+
     app.get('/users',async (req,res)=>{
       const result = await userCollection.find().toArray()
       res.send(result)
