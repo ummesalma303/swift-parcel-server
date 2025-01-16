@@ -9,7 +9,7 @@ app.use(cors());
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ot76b.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -37,10 +37,12 @@ async function run() {
 
 
     /* --------------------------------- parcel --------------------------------- */
-    app.post('/parcel',async(req,res)=>{
-      const parcel = req.body
-      const result = await parcelCollection.insertOne(parcel)
-      console.log(result)
+    
+
+    app.get('/parcels/:id',async(req,res)=>{
+      const id = req.params.id
+      const query ={_id:new ObjectId(id)}
+      const result = await parcelCollection.findOne(query)
       res.send(result)
     })
 
@@ -50,7 +52,47 @@ async function run() {
       const result = await parcelCollection.find(query).toArray()
       res.send(result)
     })
-    
+    app.post('/parcel',async(req,res)=>{
+      const parcel = req.body
+      const result = await parcelCollection.insertOne(parcel)
+      console.log(result)
+      res.send(result)
+    })
+    app.patch('/parcel/:id',async(req,res)=>{
+      const id = req.params.id
+      const item= req.body
+      const filter ={_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+
+            name:item.name,
+            email:item.email,
+            phone: item.phone,
+            parcelType:item.parcelType,
+            receiverName:item.receiverName,
+            receiverPhone:item.receiverPhone,
+            deliveryDate:item.deliveryDate,
+            totalPrice:item.totalPrice,
+            addressLatitude:item.addressLatitude,
+            addressLongitude: item.addressLongitude,
+            deliveryAddress: item.deliveryAddress,
+            bookingDate: item.bookingDate,
+            parcelWeight: item.parcelWeight,
+            // parcelType: item.parcelType
+        },
+      }
+      const result = await parcelCollection.updateOne(filter,updateDoc)
+
+      res.send(result)
+    })
+
+    app.delete('/parcel/:id',async(req,res)=>{
+      const id = req.params.id
+      const filter ={_id: new ObjectId(id)}
+      const result = await parcelCollection.deleteOne(filter)
+
+      res.send(result)
+    })
     // users
     app.get('/count',async (req,res)=>{
       const usersCount = await userCollection.estimatedDocumentCount()
