@@ -48,8 +48,8 @@ async function run() {
     });
 
     app.get("/users", async (req, res) => {
-      const filter ={role: 'User'}
-      const result = await userCollection.find(filter).toArray();
+      // const filter ={role: 'User'}
+      const result = await userCollection.find().toArray();
       res.send(result);
     });
     app.post("/users", async (req, res) => {
@@ -96,11 +96,31 @@ async function run() {
       res.send(result);
     });
     app.get("/parcel", async (req, res) => {
-      const result = await parcelCollection.find().toArray();
+      const { gte, lte } = req.query
+      // console.log(gte)
+      // console.log('100--------',gte,lte)
+      let query ={}
+      console.log(query)
+      
+      if (gte&&lte) {
+        console.log('105---')
+        query = {bookingDate:{$lte: new Date(lte).toLocaleDateString() ,$gte:new Date(gte).toLocaleDateString() }}
+        console.log(query)
+      }else if (gte) {
+        query = {bookingDate:{$gte:gte}}
+      }
+      else if (lte) {
+        console.log('111---')
+        query = {bookingDate:{$lte:lte}}
+      }
+
+      const result = await parcelCollection.find(query).toArray();
       res.send(result);
     });
+
     app.post("/parcel", async (req, res) => {
       const parcel = req.body;
+
       const result = await parcelCollection.insertOne(parcel);
       console.log(result);
       res.send(result);
@@ -185,13 +205,7 @@ async function run() {
          deliveryMenID: data.deliveryId
         }
       }
-      // {
-        //   deliveryMan: 'Umme Salma',
-        //   deliveryId: '67862c5087da116accda104a',
-        //   date: '2025-01-24',
-        //   parcelId: '67888ac391ed7a4eec8e229a',
-        //   status: 'On The Way'
-        // }
+     
         const result = await parcelCollection.updateOne(filter, updateDoc);
         console.log(result)
 
@@ -202,18 +216,48 @@ async function run() {
     /* -------------------------------- delivery -------------------------------- */
 
     app.get("/delivery", async (req, res) => {
-      // const data =  userCollection.find();
-      // if (data.role=== "Delivery Man") {
-      //  const data =  userCollection.find()
-      // }
       const filter ={role: 'Delivery Man'}
       const result =  await userCollection.find(filter).toArray()
       res.send(result);
     });
+    app.get('/myDeliveryList/:id',async(req,res)=>{
+      const id = req.params.id
+      const filter ={deliveryMenID:id}
+      const result =  await parcelCollection.find(filter).toArray()
+      res.send(result);
+    })
 
+    /* -------------------------------- // admin -------------------------------- */
+    app.patch('/changeRole/:id',async (req,res)=>{
+      const id= req.params.id
+     const filter = {_id: new ObjectId(id)}
+     const updateDoc = {
+       $set: {
+         role:'Delivery Man'
+       }
+     }
+    
+       const result = await userCollection.updateOne(filter, updateDoc);
+       console.log(result)
 
+     res.send(result);
+    })
+    
+    app.patch('/changeAdminRole/:id',async (req,res)=>{
+      const id= req.params.id
+     const filter = {_id: new ObjectId(id)}
+     const updateDoc = {
+       $set: {
+         role:'Admin'
+       }
+     }
+    
+       const result = await userCollection.updateOne(filter, updateDoc);
+       console.log(result)
 
-
+     res.send(result);
+    })
+    
 
 
 
