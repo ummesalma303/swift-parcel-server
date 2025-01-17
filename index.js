@@ -32,9 +32,38 @@ async function run() {
     const userCollection = client.db("SwiftParcel").collection("users");
     const parcelCollection = client.db("SwiftParcel").collection("parcels");
 
-    /* --------------------------------- parcel --------------------------------- */
+   
+    /* ---------------------------------- users --------------------------------- */
+    app.get("/count", async (req, res) => {
+      const usersCount = await userCollection.estimatedDocumentCount();
+      const parcelCount = await parcelCollection.estimatedDocumentCount();
+      res.send({ usersCount, parcelCount });
+    });
 
-    app.get("/parcels/:id", async (req, res) => {
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await userCollection.findOne(query);
+      res.send(result);
+    });
+
+    app.get("/users", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/users", async (req, res) => {
+      const users = req.body;
+      const result = await userCollection.insertOne(users);
+      console.log(result);
+      res.send(result);
+    });
+
+
+
+
+     /* --------------------------------- parcel --------------------------------- */
+
+     app.get("/parcels/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await parcelCollection.findOne(query);
@@ -123,48 +152,46 @@ async function run() {
     //   res.send(result)
     // })
 
-    app.patch("/updateUser/:email", async (req, res) => {
-      const email = req.params.email;
-      const user = req.body;
-      console.log('126',user)
-      const query = { email };
-      const updateDoc = {
-        $set: {
-         displayName: user.displayName,
-          photoURL: user.photoURL
-          ,
-        },
-      };
-      console.log(updateDoc)
-      const result = await userCollection.updateOne(query, updateDoc);
-      console.log(result)
-      // res.send(result);
-    });
+    // app.patch("/updateUser/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //   const user = req.body;
+    //   console.log('126',user)
+    //   const query = { email };
+    //   const updateDoc = {
+    //     $set: {
+    //      displayName: user.displayName,
+    //       photoURL: user.photoURL
+    //       ,
+    //     },
+    //   };
+    //   console.log(updateDoc)
+    //   const result = await userCollection.updateOne(query, updateDoc);
+    //   console.log(result)
+    //   // res.send(result);
+    // });
 
-    /* ---------------------------------- users --------------------------------- */
-    app.get("/count", async (req, res) => {
-      const usersCount = await userCollection.estimatedDocumentCount();
-      const parcelCount = await parcelCollection.estimatedDocumentCount();
-      res.send({ usersCount, parcelCount });
-    });
 
-    app.get("/users/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { email };
-      const result = await userCollection.findOne(query);
+
+    /* -------------------------------- delivery -------------------------------- */
+
+    app.get("/delivery", async (req, res) => {
+      // const data =  userCollection.find();
+      // if (data.role=== "Delivery Man") {
+      //  const data =  userCollection.find()
+      // }
+      const filter ={role: 'Delivery Man'}
+      const result =  await userCollection.find(filter).toArray()
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
-      res.send(result);
-    });
-    app.post("/users", async (req, res) => {
-      const users = req.body;
-      const result = await userCollection.insertOne(users);
-      console.log(result);
-      res.send(result);
-    });
+
+
+
+
+
+
+
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
