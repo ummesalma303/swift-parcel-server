@@ -48,7 +48,8 @@ async function run() {
     });
 
     app.get("/users", async (req, res) => {
-      const result = await userCollection.find().toArray();
+      const filter ={role: 'User'}
+      const result = await userCollection.find(filter).toArray();
       res.send(result);
     });
     app.post("/users", async (req, res) => {
@@ -170,6 +171,32 @@ async function run() {
     //   // res.send(result);
     // });
 
+     app.patch('/deliveryInfo/:id',async (req,res)=>{
+       const id= req.params.id
+       console.log(id)
+      const data = req.body
+      console.log(data)
+      const filter = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          deliveryMan: data. deliveryMan,
+         status: data.status,
+         approximateDate:data.date,
+         deliveryMenID: data.deliveryId
+        }
+      }
+      // {
+        //   deliveryMan: 'Umme Salma',
+        //   deliveryId: '67862c5087da116accda104a',
+        //   date: '2025-01-24',
+        //   parcelId: '67888ac391ed7a4eec8e229a',
+        //   status: 'On The Way'
+        // }
+        const result = await parcelCollection.updateOne(filter, updateDoc);
+        console.log(result)
+
+      res.send(result);
+     })
 
 
     /* -------------------------------- delivery -------------------------------- */
