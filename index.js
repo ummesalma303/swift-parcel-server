@@ -31,13 +31,17 @@ async function run() {
 
     const userCollection = client.db("SwiftParcel").collection("users");
     const parcelCollection = client.db("SwiftParcel").collection("parcels");
+    const reviewCollection = client.db("SwiftParcel").collection("reviews");
 
    
     /* ---------------------------------- users --------------------------------- */
     app.get("/count", async (req, res) => {
       const usersCount = await userCollection.estimatedDocumentCount();
       const parcelCount = await parcelCollection.estimatedDocumentCount();
-      res.send({ usersCount, parcelCount });
+      const filter ={ status:"delivered"}
+      const delivered =  await parcelCollection.countDocuments(filter)
+      // const delivered = result.estimatedDocumentCount()
+      res.send({ usersCount, parcelCount,delivered });
     });
 
     app.get("/users/:email", async (req, res) => {
@@ -95,23 +99,34 @@ async function run() {
         .toArray();
       res.send(result);
     });
+
     app.get("/parcel", async (req, res) => {
       const { gte, lte } = req.query
-      // console.log(gte)
+      console.log('105-----',gte)
       // console.log('100--------',gte,lte)
       let query ={}
       console.log(query)
       
       if (gte&&lte) {
-        console.log('105---')
-        query = {bookingDate:{$lte: new Date(lte).toLocaleDateString() ,$gte:new Date(gte).toLocaleDateString() }}
-        console.log(query)
+        console.log('111---')
+        // query = {bookingDate:{$lte: new Date(lte) ,$gte:new Date(gte)}}
+        query = {
+         bookingDate: {
+            $gte: new Date(gte), // Use Date object directly
+            $lte: new Date(lte),
+          },
+        };
+        console.log('119-----',query)
+        // console.log(bookingDate)
       }else if (gte) {
-        query = {bookingDate:{$gte:gte}}
+        query = {bookingDate:{$gte:new Date(gte)}}
+        console.log('123',query)
       }
       else if (lte) {
-        console.log('111---')
-        query = {bookingDate:{$lte:lte}}
+        console.log('125---')
+        query = {bookingDate:{$lte:new Date(lte)}}
+        console.log('128',query)
+
       }
 
       const result = await parcelCollection.find(query).toArray();
@@ -120,9 +135,9 @@ async function run() {
 
     app.post("/parcel", async (req, res) => {
       const parcel = req.body;
-
+      parcel.bookingDate = new Date()
       const result = await parcelCollection.insertOne(parcel);
-      console.log(result);
+      console.log('137------',result);
       res.send(result);
     });
     /* ------------------------------------ update parcel ----------------------------------- */
@@ -173,41 +188,41 @@ async function run() {
     //   res.send(result)
     // })
 
-    // app.patch("/updateUser/:email", async (req, res) => {
-    //   const email = req.params.email;
-    //   const user = req.body;
-    //   console.log('126',user)
-    //   const query = { email };
-    //   const updateDoc = {
-    //     $set: {
-    //      displayName: user.displayName,
-    //       photoURL: user.photoURL
-    //       ,
-    //     },
-    //   };
-    //   console.log(updateDoc)
-    //   const result = await userCollection.updateOne(query, updateDoc);
-    //   console.log(result)
-    //   // res.send(result);
-    // });
+    app.patch("/updateUser/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      console.log('126',user)
+      const query = { email };
+      const updateDoc = {
+        $set: {
+          photo: user.photo
+          ,
+        },
+      };
+      console.log('199------',updateDoc)
+      const result = await userCollection.updateOne(query, updateDoc);
+      console.log('201------',result)
+      // res.send(result);
+    });
 
      app.patch('/deliveryInfo/:id',async (req,res)=>{
        const id= req.params.id
-       console.log(id)
+      //  console.log(id)
       const data = req.body
-      console.log(data)
+      // console.log(data)
       const filter = {_id: new ObjectId(id)}
       const updateDoc = {
         $set: {
-          deliveryMan: data. deliveryMan,
+          deliveryMan: data.deliveryMan,
+          deliveryEmail: data.deliveryEmail,
          status: data.status,
          approximateDate:data.date,
-         deliveryMenID: data.deliveryId
+         deliveryMenID: data.deliveryMenID
         }
       }
      
         const result = await parcelCollection.updateOne(filter, updateDoc);
-        console.log(result)
+        // console.log(result)
 
       res.send(result);
      })
@@ -220,9 +235,9 @@ async function run() {
       const result =  await userCollection.find(filter).toArray()
       res.send(result);
     });
-    app.get('/myDeliveryList/:id',async(req,res)=>{
-      const id = req.params.id
-      const filter ={deliveryMenID:id}
+    app.get('/myDeliveryList/:email',async(req,res)=>{
+      const email = req.params.email
+      const filter ={deliveryEmail:email}
       const result =  await parcelCollection.find(filter).toArray()
       res.send(result);
     })
@@ -251,17 +266,61 @@ async function run() {
          role:'Admin'
        }
      }
-    
        const result = await userCollection.updateOne(filter, updateDoc);
        console.log(result)
 
      res.send(result);
     })
     
+    app.delete("/deliveryList/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const result = await parcelCollection.deleteOne(filter);
 
+      res.send(result);
+    });
+    
 
+    app.patch("/deliveryList/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+        $set: {
+         status: 'delivered',
+        },
+        $inc:{count:1}
+      }
+      const result = await parcelCollection.updateOne(filter,updateDoc);
 
+      res.send(result);
+    });
+    app.get('/delivered',async(req,res)=>{
+      const filter ={ status:"delivered"}
+      const result =  await parcelCollection.find(filter).toArray()
+      res.send(result);
+    })
+/* --------------------------------- reviews -------------------------------- */
+    app.post("/reviews", async (req, res) => {
+      const reviews = req.body;
+      const result = await reviewCollection.insertOne(reviews);
+      // console.log('137------',result);
+      res.send(result);
+    });
+    app.get("/reviews/:email", async (req, res) => {
+      const email = req.params.email;
+     const filter= {deliveryEmail:email}
 
+      const result = await reviewCollection.find(filter).toArray();
+      res.send(result);
+    });
+
+    app.get("/reviews", async (req, res) => {
+      // const email = req.params.email;
+    //  const filter= {deliveryEmail:email}
+
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
 
   } finally {
     // Ensures that the client will close when you finish/error
