@@ -2,10 +2,14 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const stripe = require("stripe")(process.env.STRIPE_API_SECRET);
 const port = process.env.PORT || 5000;
 //middleware
 app.use(express.json());
 app.use(cors());
+
+
+// console.log(process.env.STRIPE_API_SECRET)
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ot76b.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -32,8 +36,53 @@ async function run() {
     const userCollection = client.db("SwiftParcel").collection("users");
     const parcelCollection = client.db("SwiftParcel").collection("parcels");
     const reviewCollection = client.db("SwiftParcel").collection("reviews");
+    const paymentCollection = client.db("SwiftParcel").collection("payments");
 
+
+
+    // 
+    // app.post("/create-payment-intent", async (req, res) => {
+    //   const { items } = req.body;
+
+
+      // Create a PaymentIntent with the order amount and currency
+  // const paymentIntent = await stripe.paymentIntents.create({
+  //   amount: calculateOrderAmount(items),
+  //   currency: "usd",
+  //   // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+  //   automatic_payment_methods: {
+  //     enabled: true,
+  //   },
+  //   })
    
+
+
+  app.post("/create-payment-intent", async (req, res) => {
+    const { price } = req.body;
+    // console.log('--------62',price)
+    const amount = parseInt(price*100)
+    // console.log('64-------->',amount)
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      // amount: calculateOrderAmount(amount),
+      amount:amount,
+      currency: "usd",
+      payment_method_types: ["card"],
+    });
+
+    res.send({ clientSecret: paymentIntent.client_secret,})
+  })  
+
+  // app.delete('payment',async(req,res)=>{
+  //   const data= req.body,
+  //   const result = await 
+  //   console.log()
+  //   res.send()
+  // })
+
+
+
+
     /* ---------------------------------- users --------------------------------- */
     app.get("/count", async (req, res) => {
       const usersCount = await userCollection.estimatedDocumentCount();
@@ -323,19 +372,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/topDelivered',async(req,res)=>{
-      
-      const averageRatings = await reviewCollection.aggregate([
-        {
-          $group:{
-            _id:"$email",
-            averageRetting:{$avg:'$ratting'}
-          }
-        }
-      ]).toArray()
-    
-      
-         
+    app.get('/topDelivered',async(req,res)=>{     
       const topDeliveryMen = await parcelCollection.aggregate([
         {
           $lookup :{
