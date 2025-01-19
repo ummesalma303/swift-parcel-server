@@ -288,6 +288,7 @@ async function run() {
         $set: {
          status: 'delivered',
         },
+        // count
         $inc:{count:1}
       }
       const result = await parcelCollection.updateOne(filter,updateDoc);
@@ -308,7 +309,7 @@ async function run() {
     });
     app.get("/reviews/:email", async (req, res) => {
       const email = req.params.email;
-     const filter= {deliveryEmail:email}
+     const filter= {email:email}
 
       const result = await reviewCollection.find(filter).toArray();
       res.send(result);
@@ -321,6 +322,54 @@ async function run() {
       const result = await reviewCollection.find().toArray();
       res.send(result);
     });
+
+    app.get('/topDelivered',async(req,res)=>{
+      
+      const averageRatings = await reviewCollection.aggregate([
+        {
+          $group:{
+            _id:"$email",
+            averageRetting:{$avg:'$ratting'}
+          }
+        }
+      ]).toArray()
+    
+      
+         
+      const topDeliveryMen = await parcelCollection.aggregate([
+        {
+          $lookup :{
+          from:'reviews',
+          localField:'deliveryEmail',
+          foreignField:'email',
+          as:'reviews'
+        }, 
+      },
+      { $unwind: '$reviews'},
+      // 
+      {
+        $addFields:{
+          averageRetting:{
+            $ifNull:[{$avg:'$reviews.ratting'},0]
+          }
+        }
+      },
+      {
+        $project:{
+          bookingDate:0,
+          // reviews:0
+        }
+      },
+      {$sort:{
+        count:-1,
+        averageRetting:-1
+      }},
+      {
+        $limit:3
+      }
+      ]).toArray()
+      res.send(topDeliveryMen)
+    })
 
   } finally {
     // Ensures that the client will close when you finish/error
