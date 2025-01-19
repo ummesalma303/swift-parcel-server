@@ -73,12 +73,21 @@ async function run() {
     res.send({ clientSecret: paymentIntent.client_secret,})
   })  
 
-  // app.delete('payment',async(req,res)=>{
-  //   const data= req.body,
-  //   const result = await 
-  //   console.log()
-  //   res.send()
-  // })
+  app.patch('/payment',async(req,res)=>{
+    const data= req.body
+    console.log(data)
+    const filter = {_id:{
+      $in:data.parcelIds.map(id=> new ObjectId(id))
+    }}
+    const updateDoc = {
+      $set: {
+       show:false
+      }
+    }
+    const result = await parcelCollection.updateMany(filter,updateDoc)
+    console.log()
+    res.send(result)
+  })
 
 
 
@@ -135,7 +144,7 @@ async function run() {
     app.get("/parcel/:email", async (req, res) => {
       const email = req.params.email;
       const search = req.query.search;
-      const filter = { email };
+      const filter = { email:email, show:true};
       let query = {};
       if (search === "pending") {
         query = { status: { $regex: search, $options: "i" } };
@@ -225,18 +234,7 @@ async function run() {
       res.send(result);
     });
 
-    // app.get('/allParcel',async(req,res)=>{
-    //   const filter = req.query.filter
-    //   // console.log(filter)
-    //   let query={};
-    //   if (filter === 'pending') {
-    //     query ={ status: {$regex:filter,$options:'i'}}
-    //  }
-    //   const result = await parcelCollection.find(query).toArray()
-
-    //   res.send(result)
-    // })
-
+    
     app.patch("/updateUser/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
