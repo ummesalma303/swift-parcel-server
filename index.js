@@ -1,4 +1,5 @@
 require("dotenv").config();
+const jwt = require('jsonwebtoken');
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -39,10 +40,24 @@ async function run() {
     const paymentCollection = client.db("SwiftParcel").collection("payments");
 
 
-    app.post('jwt',(req,res)=>{
-      
+    app.post('/jwt',async(req,res)=>{
+      const user = req.body
+      const token = await jwt.sign({ user }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '365d' });
+      res.send(token)
     })
+    /* ------------------------------- middleware ------------------------------- */
 
+    const verifyToken = async (req,res,next) => {
+      console.log(req.headers)
+      if (!req.headers.authorization) {
+        return res.status(401).send({message:'forbidden access'})
+      }
+    //   const token = req.headers.authorization.split(' ')[1]
+    // jwt.verify(token,process.env.process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+    //   console.log(err)
+    // })
+      next()
+    }
    
 
 
@@ -98,8 +113,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
+    app.get("/users",verifyToken, async (req, res) => {
       // const filter ={role: 'User'}
+      // console.log(req.headers)
       const result = await userCollection.find().toArray();
       res.send(result);
     });
