@@ -39,21 +39,10 @@ async function run() {
     const paymentCollection = client.db("SwiftParcel").collection("payments");
 
 
+    app.post('jwt',(req,res)=>{
+      
+    })
 
-    // 
-    // app.post("/create-payment-intent", async (req, res) => {
-    //   const { items } = req.body;
-
-
-      // Create a PaymentIntent with the order amount and currency
-  // const paymentIntent = await stripe.paymentIntents.create({
-  //   amount: calculateOrderAmount(items),
-  //   currency: "usd",
-  //   // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
-  //   automatic_payment_methods: {
-  //     enabled: true,
-  //   },
-  //   })
    
 
 
@@ -195,9 +184,19 @@ async function run() {
       const parcel = req.body;
       parcel.bookingDate = new Date()
       const result = await parcelCollection.insertOne(parcel);
+
+      const filter = {email: req.body.email}
+      const updateDoc = {
+        // count
+        $inc:{bookingCount:1}
+      }
+      userCollection.updateOne(filter,updateDoc);
       console.log('137------',result);
       res.send(result);
     });
+
+
+
     /* ------------------------------------ update parcel ----------------------------------- */
     app.patch("/parcel/:id", async (req, res) => {
       const id = req.params.id;
@@ -279,6 +278,7 @@ async function run() {
 
     app.get("/delivery", async (req, res) => {
       const filter ={role: 'Delivery Man'}
+
       const result =  await userCollection.find(filter).toArray()
       res.send(result);
     });
@@ -328,16 +328,24 @@ async function run() {
     });
     
 
-    app.patch("/deliveryList/:id", async (req, res) => {
-      const id = req.params.id;
+    app.patch("/deliveryList", async (req, res) => {
+      const {id,deliveryMenID} = req.body;
+      console.log('id-------->',id)
       const filter = { _id: new ObjectId(id) };
       const updateDoc = {
         $set: {
          status: 'delivered',
         },
-        // count
+
         $inc:{count:1}
       }
+      const query = {_id: new ObjectId(deliveryMenID)}
+      const updateCount = {
+        // count
+        $inc:{deliveredCount:1}
+      }
+      const d= await userCollection.updateOne(query,updateCount);
+      console.log('hjg----------',d)
       const result = await parcelCollection.updateOne(filter,updateDoc);
 
       res.send(result);
@@ -350,6 +358,8 @@ async function run() {
 /* --------------------------------- reviews -------------------------------- */
     app.post("/reviews", async (req, res) => {
       const reviews = req.body;
+      console.log('358------->',reviews)
+      
       const result = await reviewCollection.insertOne(reviews);
       // console.log('137------',result);
       res.send(result);
@@ -371,38 +381,89 @@ async function run() {
     });
 
     app.get('/topDelivered',async(req,res)=>{     
-      const topDeliveryMen = await parcelCollection.aggregate([
+      
+      const topDeliveryMen = await reviewCollection.aggregate([
+       
+        
+      //    {
+      //     $lookup :{
+      //     from:'users',
+      //     localField:'email',
+      //     foreignField:'email',
+      //     as:'reviews'
+      //   }, 
+      // },
+      // { $unwind: '$reviews'},
+
+      
+
+
+      {
+          $group:{
+            _id:"$email",
+
+            ratting: {
+              $avg: "$ratting" 
+            }
+            
+          }
+        },
         {
           $lookup :{
+            from:'users',
+            localField:'_id',
+            foreignField:'email',
+            as:'info'
+          }, 
+        },
+        { $unwind: '$info'},
+       
+        {$sort:{
+          "info.deliveredCount":-1,
+          ratting:-1
+        }},
+        {
+          $limit:3
+        }
+      ]).toArray()
+     
+      res.send(topDeliveryMen)
+    })
+
+
+    app.get('/allDelivered',async(req,res)=>{     
+      
+      const topDeliveryMen = await userCollection.aggregate([
+       {
+        $match:{
+          role: 'Delivery Man'
+        }
+       },
+       {
+        $lookup :{
           from:'reviews',
-          localField:'deliveryEmail',
+          localField:'email',
           foreignField:'email',
-          as:'reviews'
+          as:'info'
         }, 
       },
-      { $unwind: '$reviews'},
-      // 
       {
-        $addFields:{
-          averageRetting:{
-            $ifNull:[{$avg:'$reviews.ratting'},0]
+        $addFields: {
+          avgRating: { 
+            $ifNull: [{ $avg: "$info.ratting" }, 0] 
           }
         }
       },
       {
         $project:{
-          bookingDate:0,
-          // reviews:0
+          info:0
         }
-      },
-      {$sort:{
-        count:-1,
-        averageRetting:-1
-      }},
-      {
-        $limit:3
       }
+        // { $unwind: '$info'},
+       
+       
       ]).toArray()
+     
       res.send(topDeliveryMen)
     })
 
