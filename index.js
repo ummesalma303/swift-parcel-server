@@ -162,8 +162,8 @@ async function run() {
       let query = {};
       if (search === "pending") {
         query = { status: { $regex: search, $options: "i" } };
-        const result = await parcelCollection.find(query).toArray();
-        res.send(result);
+        // const result = await parcelCollection.find(query).toArray();
+        // res.send(result);
       }
 
       const result = await parcelCollection
@@ -335,7 +335,7 @@ async function run() {
      const filter = {_id: new ObjectId(id)}
      const updateDoc = {
        $set: {
-         role:'Admin'
+         role:'User'
        }
      }
        const result = await userCollection.updateOne(filter, updateDoc);
