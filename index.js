@@ -52,23 +52,27 @@ async function run() {
       if (!req.headers.authorization) {
         return res.status(401).send({message:'forbidden access'})
       }
-    //   const token = req.headers.authorization.split(' ')[1]
-    // jwt.verify(token,process.env.process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
-    //   console.log(err)
-    // })
+
+      const token = req.headers.authorization.split(' ')[1]
+      // console.log('57--------',token)
+    jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+      if (err) {
+        console.log('60--------',err)
+        return res.status(401).send({message:"unauthorize access"}) 
+      }
+      req.decoded= decoded
+      // console.log('63------------',decoded)
       next()
+    })
     }
    
 
 
-  app.post("/create-payment-intent", async (req, res) => {
+  app.post("/create-payment-intent",verifyToken, async (req, res) => {
     const { price } = req.body;
-    // console.log('--------62',price)
     const amount = parseInt(price*100)
-    // console.log('64-------->',amount)
-    // Create a PaymentIntent with the order amount and currency
+    
     const paymentIntent = await stripe.paymentIntents.create({
-      // amount: calculateOrderAmount(amount),
       amount:amount,
       currency: "usd",
       payment_method_types: ["card"],
@@ -77,7 +81,7 @@ async function run() {
     res.send({ clientSecret: paymentIntent.client_secret,})
   })  
 
-  app.patch('/payment',async(req,res)=>{
+  app.patch('/payment',verifyToken,async(req,res)=>{
     const data= req.body
     console.log(data)
     const filter = {_id:{
@@ -106,8 +110,12 @@ async function run() {
       res.send({ usersCount, parcelCount,delivered });
     });
 
-    app.get("/users/:email", async (req, res) => {
+    app.get("/users/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
+      console.log('114========', req.decoded.user.email)
+      if ( req.decoded.user.email !== email) {
+        return res.status(403).send({message:'forbidden access'})
+      }
       const query = { email };
       const result = await userCollection.findOne(query);
       res.send(result);
@@ -115,7 +123,8 @@ async function run() {
 
     app.get("/users",verifyToken, async (req, res) => {
       // const filter ={role: 'User'}
-      // console.log(req.headers)
+      // console.log(req.user.email)
+      // console.log(req.decoded)
       const result = await userCollection.find().toArray();
       res.send(result);
     });
