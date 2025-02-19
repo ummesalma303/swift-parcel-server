@@ -75,13 +75,14 @@ async function run() {
 
   app.patch('/payment',verifyToken,async(req,res)=>{
     const data= req.body
-    console.log(data)
+    console.log('dddddd',data)
     const filter = {_id:{
       $in:data.parcelIds.map(id=> new ObjectId(id))
     }}
     const updateDoc = {
       $set: {
-       show:false
+        PaymentStatus:"payed",
+        show:true
       }
     }
     const result = await parcelCollection.updateMany(filter,updateDoc)
@@ -118,6 +119,7 @@ async function run() {
       // console.log(req.user.email)
       // console.log(req.decoded)
       const result = await userCollection.find().toArray();
+      // console.log(result)
       res.send(result);
     });
     app.post("/users", async (req, res) => {
@@ -138,6 +140,21 @@ async function run() {
       const result = await parcelCollection.findOne(query);
       res.send(result);
     });
+    // recent booked parcel
+    app.get("/recentParcel", async (req, res) => {
+      
+      const result = await parcelCollection.find().sort({bookingDate:-1}).limit(3).toArray();
+      console.log(result)
+      res.send(result);
+    });
+    // recent booked parcel
+    app.get("/recentParcel/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = {_id: new ObjectId(id)}
+      const result = await parcelCollection.findOne(filter);
+      console.log(result)
+      res.send(result);
+    });
     /* -------------------------------- get parcel by email(my parcel)------------------------------- */
     // app.get('/parcel/:email',async(req,res)=>{
     //   const email = req.params.email
@@ -150,7 +167,7 @@ async function run() {
     app.get("/parcel/:email", async (req, res) => {
       const email = req.params.email;
       const search = req.query.search;
-      const filter = { email:email, show:true};
+      const filter = { email:email};
       let query = {};
       if (search === "pending") {
         query = { status: { $regex: search, $options: "i" } };
@@ -327,7 +344,7 @@ async function run() {
      const filter = {_id: new ObjectId(id)}
      const updateDoc = {
        $set: {
-         role:'User'
+         role:'Admin'
        }
      }
        const result = await userCollection.updateOne(filter, updateDoc);
